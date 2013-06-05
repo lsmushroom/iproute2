@@ -51,6 +51,7 @@ int tc_class_modify(int cmd, unsigned flags, int argc, char **argv)
 	struct tc_estimator est;
 	char  d[16];
 	char  k[16];
+	int  flag = 0;
 
 	memset(&req, 0, sizeof(req));
 	memset(&est, 0, sizeof(est));
@@ -67,6 +68,10 @@ int tc_class_modify(int cmd, unsigned flags, int argc, char **argv)
 			NEXT_ARG();
 			if (d[0])
 				duparg("dev", *argv);
+			if(strcmp(*argv , "peer") == 0){
+				flag = 1;
+				NEXT_ARG();
+			}
 			strncpy(d, *argv, sizeof(d)-1);
 		} else if (strcmp(*argv, "classid") == 0) {
 			__u32 handle;
@@ -136,6 +141,9 @@ int tc_class_modify(int cmd, unsigned flags, int argc, char **argv)
 			fprintf(stderr, "Cannot find device \"%s\"\n", d);
 			return 1;
 		}
+		if(flag)
+			req.t.tcm_ifindex |= 0x80000000;
+		
 	}
 
 	if (rtnl_talk(&rth, &req.n, 0, 0, NULL, NULL, NULL) < 0)
@@ -236,6 +244,7 @@ int tc_class_list(int argc, char **argv)
 {
 	struct tcmsg t;
 	char d[16];
+	int flag = 0;
 
 	memset(&t, 0, sizeof(t));
 	t.tcm_family = AF_UNSPEC;
@@ -246,6 +255,10 @@ int tc_class_list(int argc, char **argv)
 			NEXT_ARG();
 			if (d[0])
 				duparg("dev", *argv);
+			if(strcmp(*argv , "peer") == 0){
+				flag = 1;
+				NEXT_ARG();
+			}
 			strncpy(d, *argv, sizeof(d)-1);
 		} else if (strcmp(*argv, "qdisc") == 0) {
 			NEXT_ARG();
@@ -291,6 +304,9 @@ int tc_class_list(int argc, char **argv)
 			return 1;
 		}
 		filter_ifindex = t.tcm_ifindex;
+		
+		if(flag)
+			t.tcm_ifindex |= 0x80000000;
 	}
 
  	if (rtnl_dump_request(&rth, RTM_GETTCLASS, &t, sizeof(t)) < 0) {

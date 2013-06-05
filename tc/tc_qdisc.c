@@ -59,6 +59,7 @@ int tc_qdisc_modify(int cmd, unsigned flags, int argc, char **argv)
 		struct tcmsg 		t;
 		char   			buf[TCA_BUF_MAX];
 	} req;
+	int flag = 0;
 
 	memset(&req, 0, sizeof(req));
 	memset(&stab, 0, sizeof(stab));
@@ -76,6 +77,10 @@ int tc_qdisc_modify(int cmd, unsigned flags, int argc, char **argv)
 			NEXT_ARG();
 			if (d[0])
 				duparg("dev", *argv);
+			if(strcmp(*argv , "peer") == 0){
+				flag = 1;
+				NEXT_ARG();
+			}
 			strncpy(d, *argv, sizeof(d)-1);
 		} else if (strcmp(*argv, "handle") == 0) {
 			__u32 handle;
@@ -184,6 +189,9 @@ int tc_qdisc_modify(int cmd, unsigned flags, int argc, char **argv)
 			return 1;
 		}
 		req.t.tcm_ifindex = idx;
+		
+		if(flag)
+			req.t.tcm_ifindex |= 0x80000000;
 	}
 
  	if (rtnl_talk(&rth, &req.n, 0, 0, NULL, NULL, NULL) < 0)
@@ -281,6 +289,7 @@ int tc_qdisc_list(int argc, char **argv)
 {
 	struct tcmsg t;
 	char d[16];
+	int flag = 0;
 
 	memset(&t, 0, sizeof(t));
 	t.tcm_family = AF_UNSPEC;
@@ -289,6 +298,10 @@ int tc_qdisc_list(int argc, char **argv)
 	while (argc > 0) {
 		if (strcmp(*argv, "dev") == 0) {
 			NEXT_ARG();
+			if(strcmp(*argv , "peer") == 0){
+				flag = 1;
+				NEXT_ARG();
+			}
 			strncpy(d, *argv, sizeof(d)-1);
 #ifdef TC_H_INGRESS
                 } else if (strcmp(*argv, "ingress") == 0) {
@@ -315,7 +328,12 @@ int tc_qdisc_list(int argc, char **argv)
 			fprintf(stderr, "Cannot find device \"%s\"\n", d);
 			return 1;
 		}
+
+		if(flag)
+			t.tcm_ifindex |= 0x80000000;
+		
 		filter_ifindex = t.tcm_ifindex;
+		
 	}
 
  	if (rtnl_dump_request(&rth, RTM_GETQDISC, &t, sizeof(t)) < 0) {

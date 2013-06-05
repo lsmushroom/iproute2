@@ -60,6 +60,7 @@ int tc_filter_modify(int cmd, unsigned flags, int argc, char **argv)
 	char  d[16];
 	char  k[16];
 	struct tc_estimator est;
+	int flag = 0;
 
 	memset(&req, 0, sizeof(req));
 	memset(&est, 0, sizeof(est));
@@ -80,6 +81,10 @@ int tc_filter_modify(int cmd, unsigned flags, int argc, char **argv)
 			NEXT_ARG();
 			if (d[0])
 				duparg("dev", *argv);
+			if(strcmp(*argv , "peer") == 0){
+				flag = 1;
+				NEXT_ARG();
+			}
 			strncpy(d, *argv, sizeof(d)-1);
 		} else if (strcmp(*argv, "root") == 0) {
 			if (req.t.tcm_parent) {
@@ -165,6 +170,9 @@ int tc_filter_modify(int cmd, unsigned flags, int argc, char **argv)
 			fprintf(stderr, "Cannot find device \"%s\"\n", d);
 			return 1;
 		}
+		if(flag)
+			req.t.tcm_ifindex |= 0x80000000;
+
 	}
 
  	if (rtnl_talk(&rth, &req.n, 0, 0, NULL, NULL, NULL) < 0) {
@@ -267,6 +275,7 @@ int tc_filter_list(int argc, char **argv)
 	__u32 prio = 0;
 	__u32 protocol = 0;
 	char *fhandle = NULL;
+	int flag = 0;
 
 	memset(&t, 0, sizeof(t));
 	t.tcm_family = AF_UNSPEC;
@@ -277,6 +286,10 @@ int tc_filter_list(int argc, char **argv)
 			NEXT_ARG();
 			if (d[0])
 				duparg("dev", *argv);
+			if(strcmp(*argv , "peer") == 0){
+				flag = 1;
+				NEXT_ARG();
+			}
 			strncpy(d, *argv, sizeof(d)-1);
 		} else if (strcmp(*argv, "root") == 0) {
 			if (t.tcm_parent) {
@@ -334,6 +347,9 @@ int tc_filter_list(int argc, char **argv)
 			return 1;
 		}
 		filter_ifindex = t.tcm_ifindex;
+		
+		if(flag)
+			t.tcm_ifindex |= 0x80000000;
 	}
 
  	if (rtnl_dump_request(&rth, RTM_GETTFILTER, &t, sizeof(t)) < 0) {
